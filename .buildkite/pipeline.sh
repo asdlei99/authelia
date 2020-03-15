@@ -34,6 +34,6 @@ steps:
   - label: ":chrome: Integration Tests"
     command: ".buildkite/steps/e2etests.sh | buildkite-agent pipeline upload"
     depends_on:
-      - "build-docker-amd64"
+      - "build-docker-linux-amd64"
     if: build.env("CI_DOCS_BYPASS") != "true"
 EOF
