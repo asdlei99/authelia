@@ -108,9 +108,16 @@ type ldapUserProfile struct {
 
 func (p *LDAPUserProvider) getUserProfile(conn LDAPConnection, username string) (*ldapUserProfile, error) {
 	username = p.ldapEscape(username)
-	userFilter := fmt.Sprintf("(%s=%s)", p.configuration.UsernameAttribute, username)
-	if p.configuration.UsersFilter != "" {
-		userFilter = fmt.Sprintf("(&%s%s)", userFilter, p.configuration.UsersFilter)
+	var userFilter string
+	if p.configuration.DisableAutoUsersFilter {
+		userFilter = p.configuration.UsersFilter
+		userFilter = strings.Replace(userFilter, "{0}", username, -1)
+		userFilter = strings.Replace(userFilter, "{1}", p.configuration.UsernameAttribute, -1)
+	} else {
+		userFilter = fmt.Sprintf("(%s=%s)", p.configuration.UsernameAttribute, username)
+		if p.configuration.UsersFilter != "" {
+			userFilter = fmt.Sprintf("(&%s%s)", userFilter, p.configuration.UsersFilter)
+		}
 	}
 	baseDN := p.configuration.BaseDN
 	if p.configuration.AdditionalUsersDN != "" {
