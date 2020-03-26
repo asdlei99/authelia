@@ -20,6 +20,13 @@ if [[ ! -x "$(command -v docker-compose)" ]]; then
   return
 fi
 
+if [[ $(uname) == "Darwin" ]]; then
+  if [[ ! -x "$(command -v gsed)" ]]; then
+    echo "You must install gnu-sed on your machine";
+    return
+  fi
+fi
+
 echo "Pulling Authelia docker image for setup"
 docker pull authelia/authelia > /dev/null
 
@@ -43,13 +50,21 @@ echo "Generating SSL certificate for *.$DOMAIN"
 docker run -a stdout -v $PWD/traefik/certs:/tmp/certs authelia/authelia authelia certificates generate --host *.$DOMAIN --dir /tmp/certs/ > /dev/null
 
 if [[ $DOMAIN != "example.com" ]]; then
-  sed -i "s/example.com/$DOMAIN/g" {docker-compose.yml,configuration.yml}
+  if [[ $(uname) == "Darwin" ]]; then
+    gsed -i "s/example.com/$DOMAIN/g" {docker-compose.yml,configuration.yml}
+  else
+    sed -i "s/example.com/$DOMAIN/g" {docker-compose.yml,configuration.yml}
+  fi
 fi
 
 username
 
 if [[ $USERNAME != "" ]]; then
-  sed -i "s/<USERNAME>/$USERNAME/g" users_database.yml
+  if [[ $(uname) == "Darwin" ]]; then
+    gsed -i "s/<USERNAME>/$USERNAME/g" users_database.yml
+  else
+    sed -i "s/<USERNAME>/$USERNAME/g" users_database.yml
+  fi
 else
   echo "Username cannot be empty"
   username
@@ -58,8 +73,13 @@ fi
 password
 
 if [[ $PASSWORD != "" ]]; then
-  PASSWORD=$(docker run authelia/authelia authelia hash-password $PASSWORD | sed 's/Password hash: //g')
-  sed -i "s/<PASSWORD>/$(echo $PASSWORD | sed -e 's/[\/&]/\\&/g')/g" users_database.yml
+  if [[ $(uname) == "Darwin" ]]; then
+    PASSWORD=$(docker run authelia/authelia authelia hash-password $PASSWORD | gsed 's/Password hash: //g')
+    gsed -i "s/<PASSWORD>/$(echo $PASSWORD | gsed -e 's/[\/&]/\\&/g')/g" users_database.yml
+  else
+    PASSWORD=$(docker run authelia/authelia authelia hash-password $PASSWORD | sed 's/Password hash: //g')
+    sed -i "s/<PASSWORD>/$(echo $PASSWORD | sed -e 's/[\/&]/\\&/g')/g" users_database.yml
+  fi
 else
   echo "Password cannot be empty"
   password
